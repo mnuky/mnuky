@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bead Grid Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #F0EAE1;
+      color: #3D3530;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 20px 48px;
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    .app-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 24px;
+      align-self: flex-start;
+      max-width: 960px;
+      width: 100%;
+    }
+
+    .app-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      color: #3D3530;
+    }
+
+    .app-sub {
+      font-size: 13px;
+      font-weight: 300;
+      color: #A09890;
+      letter-spacing: 0.2px;
+    }
+
+    /* ── Toolbar ─────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      background: #fff;
+      padding: 5px 8px;
+      border-radius: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(200,190,180,0.25);
+      margin-bottom: 14px;
+    }
+
+    .tool-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      border-radius: 9px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #7A736D;
+      transition: background 0.12s, color 0.12s;
+      flex-shrink: 0;
+    }
+
+    .tool-btn:hover {
+      background: #F2EBE3;
+      color: #3D3530;
+    }
+
+    .tool-btn.active {
+      background: #EBE0D8;
+      color: #3D3530;
+    }
+
+    .tool-btn.toggle-on {
+      background: #D4897E;
+      color: #fff;
+    }
+
+    .tool-btn.toggle-on:hover {
+      background: #C5796B;
+    }
+
+    .t-sep {
+      width: 1px;
+      height: 22px;
+      background: #EAE2D8;
+      margin: 0 5px;
+      flex-shrink: 0;
+    }
+
+    /* ── Canvas wrap ────────────────────────────── */
+    .canvas-wrap {
+      background: #F7F2EB;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.6);
+      margin-bottom: 14px;
+    }
+
+    #grid-sizer {
+      position: relative;
+      /* width & height set by JS to match zoom */
+    }
+
+    #bead-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: grid;
+      grid-template-columns: repeat(20, 20px);
+      gap: 3px;
+      cursor: crosshair;
+      user-select: none;
+      -webkit-user-select: none;
+      transform-origin: top left;
+      transition: transform 0.18s ease;
+    }
+
+    .bead {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid #EAE2D8;
+      cursor: crosshair;
+      transition: background-color 0.04s;
+      flex-shrink: 0;
+    }
+
+    .bead.filled {
+      box-shadow:
+        inset -2px -2px 4px rgba(0,0,0,0.2),
+        inset  2px  2px 4px rgba(255,255,255,0.28);
+    }
+
+    /* ── Bead counter ───────────────────────────── */
+    .bead-counter {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      padding: 11px 16px;
+      background: #fff;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      min-height: 42px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 0 0 1px rgba(200,190,180,0.2);
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .counter-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 400;
+      color: #5A534E;
+      white-space: nowrap;
+    }
+
+    .counter-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: inset -1px -1px 2px rgba(0,0,0,0.15), inset 1px 1px 2px rgba(255,255,255,0.25);
+    }
+
+    .counter-total {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #3D3530;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .counter-empty {
+      font-size: 12.5px;
+      color: #C0B8B0;
+      font-weight: 300;
+    }
+
+    /* ── Palette ─────────────────────────────────── */
+    .palette-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .palette {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #fff;
+      padding: 9px 13px;
+      border-radius: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(200,190,180,0.25);
+    }
+
+    .swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      outline: none;
+      transition: transform 0.12s, box-shadow 0.12s;
+      box-shadow: inset -1px -1px 3px rgba(0,0,0,0.15), inset 1px 1px 3px rgba(255,255,255,0.25);
+      flex-shrink: 0;
+    }
+
+    .swatch:hover {
+      transform: scale(1.12);
+    }
+
+    .swatch.selected {
+      box-shadow:
+        0 0 0 2px #fff,
+        0 0 0 4px #3D3530,
+        inset -1px -1px 3px rgba(0,0,0,0.15),
+        inset 1px 1px 3px rgba(255,255,255,0.25);
+    }
+
+    .p-sep {
+      width: 1px;
+      height: 18px;
+      background: #EAE2D8;
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    .eraser-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1.5px solid #D8D0C8;
+      background: #F7F2EB;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9A9290;
+      outline: none;
+      transition: all 0.12s;
+      flex-shrink: 0;
+    }
+
+    .eraser-swatch:hover {
+      background: #EEE6DC;
+      color: #3D3530;
+    }
+
+    .eraser-swatch.selected {
+      box-shadow: 0 0 0 2px #fff, 0 0 0 4px #3D3530;
+      border-color: transparent;
+    }
+
+    .color-label {
+      font-size: 12px;
+      color: #A09890;
+      font-weight: 400;
+      letter-spacing: 0.4px;
+      min-height: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-header">
+    <span class="app-title">Bead Grid Editor</span>
+    <span class="app-sub">Loom · 20 × 8</span>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <!-- Pencil -->
+    <button class="tool-btn" id="btn-pencil" title="Pencil">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 2L14 5L5 14H2V11L11 2Z"/>
+      </svg>
+    </button>
+    <!-- Eraser -->
+    <button class="tool-btn" id="btn-eraser" title="Eraser">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 14h12"/>
+        <path d="M9.5 2.5L14 7 7 14 3 10 9.5 2.5Z"/>
+        <path d="M3 10l4-4"/>
+      </svg>
+    </button>
+
+    <div class="t-sep"></div>
+
+    <!-- Mirror H -->
+    <button class="tool-btn" id="btn-mirror-h" title="Mirror Horizontal">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="2" x2="8" y2="14" stroke-dasharray="2.5 2"/>
+        <polyline points="11,5 14,8 11,11"/>
+        <polyline points="5,5 2,8 5,11"/>
+      </svg>
+    </button>
+    <!-- Mirror V -->
+    <button class="tool-btn" id="btn-mirror-v" title="Mirror Vertical">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="2" y1="8" x2="14" y2="8" stroke-dasharray="2.5 2"/>
+        <polyline points="5,5 8,2 11,5"/>
+        <polyline points="5,11 8,14 11,11"/>
+      </svg>
+    </button>
+
+    <div class="t-sep"></div>
+
+    <!-- Undo -->
+    <button class="tool-btn" id="btn-undo" title="Undo (Ctrl+Z)">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7.5C3 5 5 3 7.5 3H10C12.2 3 14 4.8 14 7S12.2 11 10 11H6"/>
+        <polyline points="6,4.5 3,7.5 6,10.5"/>
+      </svg>
+    </button>
+
+    <div class="t-sep"></div>
+
+    <!-- Zoom out -->
+    <button class="tool-btn" id="btn-zoom-out" title="Zoom Out">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6.5" cy="6.5" r="4"/>
+        <line x1="10.5" y1="10.5" x2="14" y2="14"/>
+        <line x1="4.5" y1="6.5" x2="8.5" y2="6.5"/>
+      </svg>
+    </button>
+    <!-- Zoom in -->
+    <button class="tool-btn" id="btn-zoom-in" title="Zoom In">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6.5" cy="6.5" r="4"/>
+        <line x1="10.5" y1="10.5" x2="14" y2="14"/>
+        <line x1="6.5" y1="4.5" x2="6.5" y2="8.5"/>
+        <line x1="4.5" y1="6.5" x2="8.5" y2="6.5"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Canvas -->
+  <div class="canvas-wrap">
+    <div id="grid-sizer">
+      <div id="bead-grid"></div>
+    </div>
+  </div>
+
+  <!-- Bead counter -->
+  <div class="bead-counter" id="bead-counter">
+    <span class="counter-empty">No beads placed yet</span>
+  </div>
+
+  <!-- Palette -->
+  <div class="palette-wrap">
+    <div class="palette" id="palette"></div>
+    <div class="color-label" id="color-label"></div>
+  </div>
+
+  <script>
+    const COLS = 20;
+    const ROWS = 8;
+    const BEAD_SIZE = 20;
+    const BEAD_GAP = 3;
+
+    const COLORS = [
+      '#D4897E', '#F7B85A', '#93C5B0', '#5F96A8',
+      '#E5A495', '#78B09C', '#C5796B', '#EFC47A'
+    ];
+
+    const COLOR_INFO = {
+      '#D4897E': { code: 'DB-723', name: 'Dusty Rose' },
+      '#F7B85A': { code: 'DB-853', name: 'Nectarine' },
+      '#93C5B0': { code: 'DB-234', name: 'Sage' },
+      '#5F96A8': { code: 'DB-792', name: 'Steel Blue' },
+      '#E5A495': { code: 'DB-105', name: 'Blush' },
+      '#78B09C': { code: 'DB-274', name: 'Sea Glass' },
+      '#C5796B': { code: 'DB-654', name: 'Terracotta' },
+      '#EFC47A': { code: 'DB-422', name: 'Honey' },
+    };
+
+    // ── State ──────────────────────────────────────
+    let grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    let tool = 'pencil';
+    let currentColor = COLORS[1]; // Nectarine
+    let mirrorH = false;
+    let mirrorV = false;
+    let zoom = 1.0;
+    let history = [];
+    let isDrawing = false;
+    let lastPainted = null;
+
+    // 2-D array of bead DOM elements
+    let beadEls = [];
+
+    // ── Boot ──────────────────────────────────────
+    function init() {
+      buildGrid();
+      buildPalette();
+      wireToolbar();
+      wireGridEvents();
+      wireKeyboard();
+      updateZoom();
+      syncToolUI();
+      updateColorLabel();
+      updateCounter();
+    }
+
+    // ── Grid construction ─────────────────────────
+    function buildGrid() {
+      const gridEl = document.getElementById('bead-grid');
+      gridEl.innerHTML = '';
+      beadEls = [];
+      for (let r = 0; r < ROWS; r++) {
+        beadEls[r] = [];
+        for (let c = 0; c < COLS; c++) {
+          const el = document.createElement('div');
+          el.className = 'bead';
+          el.dataset.row = r;
+          el.dataset.col = c;
+          gridEl.appendChild(el);
+          beadEls[r][c] = el;
+        }
+      }
+    }
+
+    // ── Palette construction ──────────────────────
+    function buildPalette() {
+      const pal = document.getElementById('palette');
+      pal.innerHTML = '';
+
+      COLORS.forEach(color => {
+        const btn = document.createElement('button');
+        btn.className = 'swatch';
+        btn.style.backgroundColor = color;
+        btn.dataset.color = color;
+        const info = COLOR_INFO[color];
+        btn.title = info ? `${info.code} · ${info.name}` : color;
+        btn.addEventListener('click', () => pickColor(color));
+        pal.appendChild(btn);
+      });
+
+      const sep = document.createElement('div');
+      sep.className = 'p-sep';
+      pal.appendChild(sep);
+
+      const eraserBtn = document.createElement('button');
+      eraserBtn.className = 'eraser-swatch';
+      eraserBtn.id = 'palette-eraser';
+      eraserBtn.title = 'Eraser';
+      eraserBtn.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+          stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <line x1="1.5" y1="1.5" x2="10.5" y2="10.5"/>
+          <line x1="10.5" y1="1.5" x2="1.5" y2="10.5"/>
+        </svg>`;
+      eraserBtn.addEventListener('click', () => setTool('eraser'));
+      pal.appendChild(eraserBtn);
+    }
+
+    // ── Tool / color selection ────────────────────
+    function pickColor(color) {
+      currentColor = color;
+      setTool('pencil');
+    }
+
+    function setTool(newTool) {
+      tool = newTool;
+      syncToolUI();
+      updateColorLabel();
+    }
+
+    function syncToolUI() {
+      // Toolbar draw tools
+      document.getElementById('btn-pencil').classList.toggle('active', tool === 'pencil');
+      document.getElementById('btn-eraser').classList.toggle('active', tool === 'eraser');
+
+      // Palette swatches
+      document.querySelectorAll('.swatch').forEach(s => {
+        s.classList.toggle('selected', tool === 'pencil' && s.dataset.color === currentColor);
+      });
+
+      // Palette eraser
+      const pe = document.getElementById('palette-eraser');
+      if (pe) pe.classList.toggle('selected', tool === 'eraser');
+    }
+
+    // ── Toolbar wiring ────────────────────────────
+    function wireToolbar() {
+      document.getElementById('btn-pencil').addEventListener('click', () => setTool('pencil'));
+      document.getElementById('btn-eraser').addEventListener('click', () => setTool('eraser'));
+
+      document.getElementById('btn-mirror-h').addEventListener('click', () => {
+        mirrorH = !mirrorH;
+        document.getElementById('btn-mirror-h').classList.toggle('toggle-on', mirrorH);
+      });
+
+      document.getElementById('btn-mirror-v').addEventListener('click', () => {
+        mirrorV = !mirrorV;
+        document.getElementById('btn-mirror-v').classList.toggle('toggle-on', mirrorV);
+      });
+
+      document.getElementById('btn-undo').addEventListener('click', undo);
+
+      document.getElementById('btn-zoom-in').addEventListener('click', () => {
+        zoom = Math.min(2, +(zoom + 0.25).toFixed(2));
+        updateZoom();
+      });
+
+      document.getElementById('btn-zoom-out').addEventListener('click', () => {
+        zoom = Math.max(0.5, +(zoom - 0.25).toFixed(2));
+        updateZoom();
+      });
+    }
+
+    // ── Grid event wiring ─────────────────────────
+    function wireGridEvents() {
+      const gridEl = document.getElementById('bead-grid');
+
+      gridEl.addEventListener('mousedown', e => {
+        const bead = e.target.closest('.bead');
+        if (!bead) return;
+        e.preventDefault();
+        pushHistory();
+        isDrawing = true;
+        lastPainted = null;
+        paint(+bead.dataset.row, +bead.dataset.col);
+      });
+
+      gridEl.addEventListener('mousemove', e => {
+        if (!isDrawing) return;
+        const bead = e.target.closest('.bead');
+        if (!bead) return;
+        const r = +bead.dataset.row;
+        const c = +bead.dataset.col;
+        if (lastPainted && lastPainted.r === r && lastPainted.c === c) return;
+        paint(r, c);
+      });
+
+      document.addEventListener('mouseup', () => { isDrawing = false; });
+      gridEl.addEventListener('contextmenu', e => e.preventDefault());
+    }
+
+    function wireKeyboard() {
+      document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+          e.preventDefault();
+          undo();
+        }
+      });
+    }
+
+    // ── Painting ──────────────────────────────────
+    function paint(r, c) {
+      lastPainted = { r, c };
+      const color = tool === 'eraser' ? null : currentColor;
+
+      setCell(r, c, color);
+      if (mirrorH)              setCell(ROWS - 1 - r, c,           color);
+      if (mirrorV)              setCell(r,             COLS - 1 - c, color);
+      if (mirrorH && mirrorV)   setCell(ROWS - 1 - r, COLS - 1 - c, color);
+
+      updateCounter();
+    }
+
+    function setCell(r, c, color) {
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+      grid[r][c] = color;
+      renderBead(r, c);
+    }
+
+    function renderBead(r, c) {
+      const el = beadEls[r][c];
+      const color = grid[r][c];
+      if (color) {
+        el.style.backgroundColor = color;
+        el.style.borderColor = shadeColor(color, -18);
+        el.classList.add('filled');
+      } else {
+        el.style.backgroundColor = '#fff';
+        el.style.borderColor = '#EAE2D8';
+        el.classList.remove('filled');
+      }
+    }
+
+    function shadeColor(hex, amount) {
+      const n = parseInt(hex.replace('#',''), 16);
+      const r = Math.min(255, Math.max(0, (n >> 16) + amount));
+      const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + amount));
+      const b = Math.min(255, Math.max(0, (n & 0xff) + amount));
+      return `rgb(${r},${g},${b})`;
+    }
+
+    // ── Undo ──────────────────────────────────────
+    function pushHistory() {
+      history.push(grid.map(row => [...row]));
+      if (history.length > 20) history.shift();
+    }
+
+    function undo() {
+      if (!history.length) return;
+      grid = history.pop();
+      for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++)
+          renderBead(r, c);
+      updateCounter();
+    }
+
+    // ── Zoom ──────────────────────────────────────
+    function updateZoom() {
+      const naturalW = COLS * BEAD_SIZE + (COLS - 1) * BEAD_GAP;
+      const naturalH = ROWS * BEAD_SIZE + (ROWS - 1) * BEAD_GAP;
+      const gridEl = document.getElementById('bead-grid');
+      const sizer  = document.getElementById('grid-sizer');
+
+      gridEl.style.transform = `scale(${zoom})`;
+      sizer.style.width  = naturalW * zoom + 'px';
+      sizer.style.height = naturalH * zoom + 'px';
+    }
+
+    // ── Color label ───────────────────────────────
+    function updateColorLabel() {
+      const el = document.getElementById('color-label');
+      if (tool === 'eraser') {
+        el.textContent = 'Eraser selected';
+      } else {
+        const info = COLOR_INFO[currentColor];
+        el.textContent = info ? `${info.code} · ${info.name}` : currentColor;
+      }
+    }
+
+    // ── Bead counter ──────────────────────────────
+    function updateCounter() {
+      const counts = {};
+      for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++) {
+          const col = grid[r][c];
+          if (col) counts[col] = (counts[col] || 0) + 1;
+        }
+
+      const el = document.getElementById('bead-counter');
+      const total = Object.values(counts).reduce((s, n) => s + n, 0);
+
+      if (!total) {
+        el.innerHTML = '<span class="counter-empty">No beads placed yet</span>';
+        return;
+      }
+
+      let html = '';
+      for (const color of COLORS) {
+        if (!counts[color]) continue;
+        const info = COLOR_INFO[color];
+        html += `<span class="counter-item">
+          <span class="counter-dot" style="background:${color}"></span>
+          <span>${info.code} &times; ${counts[color]}</span>
+        </span>`;
+      }
+      html += `<span class="counter-total">Total: ${total}</span>`;
+      el.innerHTML = html;
+    }
+
+    // ── Go ────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
