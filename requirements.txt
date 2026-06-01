@@ -1,0 +1,4 @@
+anthropic>=0.40.0
+notion-client>=2.2.1
+pandas>=2.2.0
+python-dotenv>=1.0.0
